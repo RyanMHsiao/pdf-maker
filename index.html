@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>PDF Maker</title>
+<meta charset="utf-8" />
+<script src="https://unpkg.com/pdf-lib"></script>
+</head>
+
+<body>
+	<div>
+		<label for="page-image">Choose your pages</label>
+		<input type="file" id="file-input" name="file-input" multiple accept="image/jpeg"/>
+    <br>
+    <button id="file-input-confirm">Generate PDF</button>
+	</div>
+	<a id="download-button" download="hello.pdf">Download</a>
+</body>
+
+<script>
+document.getElementById("file-input-confirm").addEventListener("click", createPdf);
+
+async function createPdf() {
+	const pdfDoc = await PDFLib.PDFDocument.create();
+
+	for (const file of document.getElementById("file-input").files) {
+		const dataURL = await blobToDataURL(file);
+		const jpgImage = await pdfDoc.embedJpg(dataURL);
+		const page = pdfDoc.addPage()
+		page.drawImage(jpgImage, {
+			x: 0,
+			y: 0,
+			width: jpgImage.width,
+			height: jpgImage.height
+		});
+	}
+
+	const pdfDataUri = await pdfDoc.saveAsBase64({ dataUri: true });
+	// document.getElementById('pdf').src = pdfDataUri;
+
+	let link = document.getElementById('download-button');
+	link.href = pdfDataUri;
+}
+
+async function blobToDataURL(blob) {
+	return new Promise((resolve, reject) => {
+		const reader = new FileReader();
+		reader.onload = () => resolve(reader.result);
+		reader.onerror = () => reject(reader.error);
+		reader.readAsDataURL(blob);
+	});
+}
+</script>
+
+</html>
