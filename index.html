@@ -14,34 +14,54 @@
 
 		async createPdf() {
 			const pdfDoc = await PDFLib.PDFDocument.create();
+			// PDF unit defined as 1/72th of an inch. Does not reject negative yet.
+			const pageWidth = isNaN(this.outputInches) ? this.outputInches * 72 : 612;
 
 			for (const file of $refs.fileInput.files) {
 				const dataURL = await blobToDataURL(file);
 				const jpgImage = await pdfDoc.embedJpg(dataURL);
-				const page = pdfDoc.addPage()
+				const pageHeight = pageWidth / jpgImage.width * jpgImage.height;
+				const page = pdfDoc.addPage([pageWidth, pageHeight])
 				page.drawImage(jpgImage, {
 					x: 0,
 					y: 0,
-					width: jpgImage.width,
-					height: jpgImage.height
+					width: pageWidth,
+					height: pageHeight,
 				});
 			}
 
 			this.outputDataUri = await pdfDoc.saveAsBase64({ dataUri: true });
-		}
+		},
+
+		outputName: '',
+		outputInches: '8.5',
 
 	}">
-		<div>
-			<label for="file-input">Choose your pages</label>
-			<input type="file" name="file-input" x-ref="fileInput" multiple accept="image/jpeg"/>
+		<label>
+			Select pages:
+			<input type="file" id="file-input" x-ref="fileInput" multiple accept="image/jpeg"/>
+		</label>
+		<br>
+		<label>
+			Page width (inches):
+			<input x-model="outputInches" placeholder="8.5">
+		</label>
 		<br>
 		<button x-on:click="createPdf()">Generate PDF</button>
-		</div>
-		<a x-bind:href="outputDataUri" download="hello.pdf">Download</a>
+		<br>
+		<label>
+			Save as:
+			<input x-model="outputName" placeholder="filename">
+		</label>
+		<span>.pdf</span>
+		<br>
+		<a x-bind:href="outputDataUri" x-bind:download="outputName + '.pdf'">Download</a>
 	</div>
 </body>
 <script>
 // I'm not sure if this it is best practice to put this utility function here
+// It appears not to be based on https://alpinejs.dev/essentials/state#re-usable-data
+// and the page for Alpine.data(...), but it would be strange to move this to the main div
 async function blobToDataURL(blob) {
 	return new Promise((resolve, reject) => {
 		const reader = new FileReader();
