@@ -4,43 +4,44 @@
 <title>PDF Maker</title>
 <meta charset="utf-8" />
 <script src="https://unpkg.com/pdf-lib"></script>
+<script src="https://unpkg.com/alpinejs" defer></script>
 </head>
 
 <body>
-	<div>
-		<label for="page-image">Choose your pages</label>
-		<input type="file" id="file-input" name="file-input" multiple accept="image/jpeg"/>
-    <br>
-    <button id="file-input-confirm">Generate PDF</button>
+	<div x-data="{
+	
+		outputDataUri: null,
+
+		async createPdf() {
+			const pdfDoc = await PDFLib.PDFDocument.create();
+
+			for (const file of $refs.fileInput.files) {
+				const dataURL = await blobToDataURL(file);
+				const jpgImage = await pdfDoc.embedJpg(dataURL);
+				const page = pdfDoc.addPage()
+				page.drawImage(jpgImage, {
+					x: 0,
+					y: 0,
+					width: jpgImage.width,
+					height: jpgImage.height
+				});
+			}
+
+			this.outputDataUri = await pdfDoc.saveAsBase64({ dataUri: true });
+		}
+
+	}">
+		<div>
+			<label for="file-input">Choose your pages</label>
+			<input type="file" name="file-input" x-ref="fileInput" multiple accept="image/jpeg"/>
+		<br>
+		<button x-on:click="createPdf()">Generate PDF</button>
+		</div>
+		<a x-bind:href="outputDataUri" download="hello.pdf">Download</a>
 	</div>
-	<a id="download-button" download="hello.pdf">Download</a>
 </body>
-
 <script>
-document.getElementById("file-input-confirm").addEventListener("click", createPdf);
-
-async function createPdf() {
-	const pdfDoc = await PDFLib.PDFDocument.create();
-
-	for (const file of document.getElementById("file-input").files) {
-		const dataURL = await blobToDataURL(file);
-		const jpgImage = await pdfDoc.embedJpg(dataURL);
-		const page = pdfDoc.addPage()
-		page.drawImage(jpgImage, {
-			x: 0,
-			y: 0,
-			width: jpgImage.width,
-			height: jpgImage.height
-		});
-	}
-
-	const pdfDataUri = await pdfDoc.saveAsBase64({ dataUri: true });
-	// document.getElementById('pdf').src = pdfDataUri;
-
-	let link = document.getElementById('download-button');
-	link.href = pdfDataUri;
-}
-
+// I'm not sure if this it is best practice to put this utility function here
 async function blobToDataURL(blob) {
 	return new Promise((resolve, reject) => {
 		const reader = new FileReader();
@@ -50,5 +51,4 @@ async function blobToDataURL(blob) {
 	});
 }
 </script>
-
 </html>
