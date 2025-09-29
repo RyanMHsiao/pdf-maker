@@ -9,10 +9,13 @@
 
 <body>
 	<div x-data="{
+	
+		outputDataUri: null,
+
 		async createPdf() {
 			const pdfDoc = await PDFLib.PDFDocument.create();
 
-			for (const file of document.getElementById('file-input').files) {
+			for (const file of $refs.fileInput.files) {
 				const dataURL = await blobToDataURL(file);
 				const jpgImage = await pdfDoc.embedJpg(dataURL);
 				const page = pdfDoc.addPage()
@@ -24,23 +27,21 @@
 				});
 			}
 
-			const pdfDataUri = await pdfDoc.saveAsBase64({ dataUri: true });
-
-			let link = document.getElementById('download-button');
-			link.href = pdfDataUri;
-		},
+			this.outputDataUri = await pdfDoc.saveAsBase64({ dataUri: true });
+		}
 
 	}">
 		<div>
-			<label for="page-image">Choose your pages</label>
-			<input type="file" id="file-input" name="file-input" multiple accept="image/jpeg"/>
+			<label for="file-input">Choose your pages</label>
+			<input type="file" name="file-input" x-ref="fileInput" multiple accept="image/jpeg"/>
 		<br>
 		<button x-on:click="createPdf()">Generate PDF</button>
 		</div>
-		<a id="download-button" download="hello.pdf">Download</a>
+		<a x-bind:href="outputDataUri" download="hello.pdf">Download</a>
 	</div>
 </body>
 <script>
+// I'm not sure if this it is best practice to put this utility function here
 async function blobToDataURL(blob) {
 	return new Promise((resolve, reject) => {
 		const reader = new FileReader();
