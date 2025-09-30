@@ -13,7 +13,11 @@
 		nextPageKey: 1,
 		async addPages(files) {
 			for (const file of files) {
-				this.pages.push({id: this.nextPageKey, url: await blobToDataURL(file)});
+				this.pages.push({
+					id: this.nextPageKey,
+					url: await blobToDataURL(file),
+					rotation: 0,
+				});
 				this.nextPageKey += 1;
 			}
 		},
@@ -25,18 +29,14 @@
 		async createPdf() {
 			const pdfDoc = await PDFLib.PDFDocument.create();
 			// PDF unit defined as 1/72th of an inch. Does not reject negative yet.
+			// Feature idea: list both max width and max height, use tighter constraint
 			const pageWidth = isNaN(this.outputInches) ? this.outputInches * 72 : 612;
 
 			for (const pageData of this.pages) {
 				const jpgImage = await pdfDoc.embedJpg(pageData.url);
-				const pageHeight = pageWidth / jpgImage.width * jpgImage.height;
+				const {pageHeight, ...drawOptions} = getPageOptions(pageWidth, jpgImage, pageData.rotation);
 				const page = pdfDoc.addPage([pageWidth, pageHeight])
-				page.drawImage(jpgImage, {
-					x: 0,
-					y: 0,
-					width: pageWidth,
-					height: pageHeight,
-				});
+				page.drawImage(jpgImage, drawOptions);
 			}
 			this.outputDataUri = await pdfDoc.saveAsBase64({ dataUri: true });
 		},
@@ -54,6 +54,7 @@
 			<template x-for="page in pages" :key="page.id">
 				<li style="height:100px">
 					<img x-bind:src="page.url" style="height:100%" />
+					<button x-on:click="page.rotation = (page.rotation + 90) % 360">↺ rotate</button>
 				</li>
 			</template>
 		</ul>
@@ -79,6 +80,31 @@ async function blobToDataURL(blob) {
 		reader.onerror = () => reject(reader.error);
 		reader.readAsDataURL(blob);
 	});
+}
+
+function getPageOptions(pageWidth, jpgImage, rotate) {
+	console.log(pageWidth, jpgImage, rotate);
+	if (rotate != 0 && rotate != 90 && rotate != 180 && rotate != 270) {
+		rotate = 0;
+	}
+	let result = {x: 0, y: 0, rotate: PDFLib.degrees(rotate)};
+	if (rotate == 0 || rotate == 180) {
+		result.pageHeight = pageWidth / jpgImage.width * jpgImage.height;
+		result.width = pageWidth;
+		result.height = result.pageHeight;
+	} else {
+		result.pageHeight = pageWidth / jpgImage.height * jpgImage.width;
+		result.width = result.pageHeight;
+		result.height = pageWidth;
+	}
+	if (rotate == 90 || rotate == 180) {
+		result.x = pageWidth;
+	}
+	if (rotate == 180 || rotate == 270) {
+		result.y = result.pageHeight;
+	}
+	console.log(result);
+	return result;
 }
 </script>
 </html>
