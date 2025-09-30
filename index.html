@@ -52,8 +52,10 @@
 		</label>
 		<ul>
 			<template x-for="page in pages" :key="page.id">
-				<li style="height:100px">
-					<img x-bind:src="page.url" style="height:100%" />
+				<li>
+					<span style="display:inline-flex;justify-content:center;height:100px;width:100px">
+					<img x-bind:src="page.url" x-bind:style="`transform:rotate(-${page.rotation}deg);max-height:100%;object-fit:contain;max-width:100%`" />
+					</span>
 					<button x-on:click="page.rotation = (page.rotation + 90) % 360">↺ rotate</button>
 				</li>
 			</template>
