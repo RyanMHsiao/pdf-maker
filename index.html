@@ -51,35 +51,34 @@
 			<input x-model="outputInches" placeholder="8.5">
 		</label>
 		<ul x-data="{
-			toMove: null,
+			toMoveIndex: null,
 
-			// These functions work on the pages array
-			getPageIndex(targetElement) {
-				for (let i = 0; i < pages.length; ++i) {
-					if (pages[i].id == targetElement.dataset.pageId) {
-						return i;
-					}
-				}
-				return pages.length; // Pretty safe failure value for our purposes
-			},
-			// Moves toMove within pages to offset + position of targetElement
-			// offset is 0 or 1 for before or after
-			moveTo(targetElement, offset) {
-				const toMoveIndex = this.getPageIndex(this.toMove);
-				const toMoveData = pages[toMoveIndex];
-				// Some strange behavior if toMove is same as targetElement
-				if (toMoveIndex === pages.length || this.toMove === null) {
+			moveTo(targetElement, insertOffset) {
+				if (this.toMoveIndex === null || isNaN(this.toMoveIndex)) {
 					return;
 				}
-				pages.splice(toMoveIndex, 1);
-				// Add toMove back to the proper position, either before or after
-				pages.splice(offset + this.getPageIndex(targetElement), 0, toMoveData);
-				this.toMove = null;
+
+				const target = +targetElement.dataset.index;
+				const toMove = pages[this.toMoveIndex];
+
+				// We work on a copy to avoid weirdness with alpine trying
+				// to update the page based on intermediate states
+				const pagesCopy = [...pages];
+				pagesCopy.splice(target + insertOffset, 0, toMove);
+				
+				if (target < this.toMoveIndex) {
+					pagesCopy.splice(this.toMoveIndex + 1, 1);
+				} else {
+					pagesCopy.splice(this.toMoveIndex, 1);
+				}
+
+				pages = pagesCopy;
+				this.toMoveIndex = null;
 			},
 		}">
-			<template x-for="page in pages" :key="page.id">
-				<li x-bind:data-page-id="page.id">
-					<button x-on:click="toMove = $el.parentNode">move</button>
+			<template x-for="(page, index) in pages" :key="page.id">
+				<li x-bind:data-index="index">
+					<button x-on:click="toMoveIndex = +$el.parentNode.dataset.index">move</button>
 					<button x-on:click="moveTo($el.parentNode, 0)">before</button>
 					<button x-on:click="moveTo($el.parentNode, 1)">after</button>
 					<span style="display:inline-flex;justify-content:center;height:100px;width:100px">
