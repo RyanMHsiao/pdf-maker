@@ -50,9 +50,38 @@
 			Page width (inches):
 			<input x-model="outputInches" placeholder="8.5">
 		</label>
-		<ul>
+		<ul x-data="{
+			toMove: null,
+
+			// These functions work on the pages array
+			getPageIndex(targetElement) {
+				for (let i = 0; i < pages.length; ++i) {
+					if (pages[i].id == targetElement.dataset.pageId) {
+						return i;
+					}
+				}
+				return pages.length; // Pretty safe failure value for our purposes
+			},
+			// Moves toMove within pages to offset + position of targetElement
+			// offset is 0 or 1 for before or after
+			moveTo(targetElement, offset) {
+				const toMoveIndex = this.getPageIndex(this.toMove);
+				const toMoveData = pages[toMoveIndex];
+				// Some strange behavior if toMove is same as targetElement
+				if (toMoveIndex === pages.length || this.toMove === null) {
+					return;
+				}
+				pages.splice(toMoveIndex, 1);
+				// Add toMove back to the proper position, either before or after
+				pages.splice(offset + this.getPageIndex(targetElement), 0, toMoveData);
+				this.toMove = null;
+			},
+		}">
 			<template x-for="page in pages" :key="page.id">
-				<li>
+				<li x-bind:data-page-id="page.id">
+					<button x-on:click="toMove = $el.parentNode">move</button>
+					<button x-on:click="moveTo($el.parentNode, 0)">before</button>
+					<button x-on:click="moveTo($el.parentNode, 1)">after</button>
 					<span style="display:inline-flex;justify-content:center;height:100px;width:100px">
 					<img x-bind:src="page.url" x-bind:style="`transform:rotate(-${page.rotation}deg);max-height:100%;object-fit:contain;max-width:100%`" />
 					</span>
