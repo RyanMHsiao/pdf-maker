@@ -9,39 +9,72 @@
 
 <body>
 	<div x-data="{
+		pages: [],
+		nextPageKey: 1,
+		async addPages(files) {
+			for (const file of files) {
+				this.pages.push({
+					id: this.nextPageKey,
+					url: await blobToDataURL(file),
+					rotation: 0,
+				});
+				this.nextPageKey += 1;
+			}
+		},
 	
-		outputDataUri: null,
+		outputName: '',
+		outputInches: '8.5',
 
+		outputDataUri: null,
 		async createPdf() {
 			const pdfDoc = await PDFLib.PDFDocument.create();
+			// PDF unit defined as 1/72th of an inch. Does not reject negative yet.
+			// Feature idea: list both max width and max height, use tighter constraint
+			const pageWidth = isNaN(this.outputInches) ? this.outputInches * 72 : 612;
 
-			for (const file of $refs.fileInput.files) {
-				const dataURL = await blobToDataURL(file);
-				const jpgImage = await pdfDoc.embedJpg(dataURL);
-				const page = pdfDoc.addPage()
-				page.drawImage(jpgImage, {
-					x: 0,
-					y: 0,
-					width: jpgImage.width,
-					height: jpgImage.height
-				});
+			for (const pageData of this.pages) {
+				const jpgImage = await pdfDoc.embedJpg(pageData.url);
+				const {pageHeight, ...drawOptions} = getPageOptions(pageWidth, jpgImage, pageData.rotation);
+				const page = pdfDoc.addPage([pageWidth, pageHeight])
+				page.drawImage(jpgImage, drawOptions);
 			}
-
 			this.outputDataUri = await pdfDoc.saveAsBase64({ dataUri: true });
-		}
-
+		},
 	}">
-		<div>
-			<label for="file-input">Choose your pages</label>
-			<input type="file" name="file-input" x-ref="fileInput" multiple accept="image/jpeg"/>
+		<label>
+			Add pages:
+			<input x-on:change="addPages($el.files)" type="file" id="file-input" x-ref="fileInput" multiple accept="image/jpeg"/>
+		</label>
+		<br>
+		<label>
+			Page width (inches):
+			<input x-model="outputInches" placeholder="8.5">
+		</label>
+		<ul>
+			<template x-for="page in pages" :key="page.id">
+				<li>
+					<span style="display:inline-flex;justify-content:center;height:100px;width:100px">
+					<img x-bind:src="page.url" x-bind:style="`transform:rotate(-${page.rotation}deg);max-height:100%;object-fit:contain;max-width:100%`" />
+					</span>
+					<button x-on:click="page.rotation = (page.rotation + 90) % 360">↺ rotate</button>
+				</li>
+			</template>
+		</ul>
+		<label>
+			Save as:
+			<input x-model="outputName" placeholder="filename">
+		</label>
+		<span>.pdf</span>
 		<br>
 		<button x-on:click="createPdf()">Generate PDF</button>
-		</div>
-		<a x-bind:href="outputDataUri" download="hello.pdf">Download</a>
+		<br>
+		<a x-bind:href="outputDataUri" x-bind:download="outputName + '.pdf'">Download</a>
 	</div>
 </body>
 <script>
 // I'm not sure if this it is best practice to put this utility function here
+// It appears not to be based on https://alpinejs.dev/essentials/state#re-usable-data
+// and the page for Alpine.data(...), but it would be strange to move this to the main div
 async function blobToDataURL(blob) {
 	return new Promise((resolve, reject) => {
 		const reader = new FileReader();
@@ -49,6 +82,31 @@ async function blobToDataURL(blob) {
 		reader.onerror = () => reject(reader.error);
 		reader.readAsDataURL(blob);
 	});
+}
+
+function getPageOptions(pageWidth, jpgImage, rotate) {
+	console.log(pageWidth, jpgImage, rotate);
+	if (rotate != 0 && rotate != 90 && rotate != 180 && rotate != 270) {
+		rotate = 0;
+	}
+	let result = {x: 0, y: 0, rotate: PDFLib.degrees(rotate)};
+	if (rotate == 0 || rotate == 180) {
+		result.pageHeight = pageWidth / jpgImage.width * jpgImage.height;
+		result.width = pageWidth;
+		result.height = result.pageHeight;
+	} else {
+		result.pageHeight = pageWidth / jpgImage.height * jpgImage.width;
+		result.width = result.pageHeight;
+		result.height = pageWidth;
+	}
+	if (rotate == 90 || rotate == 180) {
+		result.x = pageWidth;
+	}
+	if (rotate == 180 || rotate == 270) {
+		result.y = result.pageHeight;
+	}
+	console.log(result);
+	return result;
 }
 </script>
 </html>
