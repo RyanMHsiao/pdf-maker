@@ -80,10 +80,18 @@ button {
 				pages = pagesCopy;
 				this.toMoveIndex = null;
 			},
+
+			removePage() {
+				if (this.toMoveIndex === null) {
+					return;
+				}
+				pages.splice(this.toMoveIndex, 1);
+				this.toMoveIndex = null;
+			},
 		}">
 			<template x-for="(page, index) in pages" :key="page.id">
 				<li x-bind:data-index="index">
-					<button title="Select this page to be moved" x-show="toMoveIndex === null" x-on:click="toMoveIndex = +$el.parentNode.dataset.index">✥</button>
+					<button title="Select this page to be moved or deleted" x-show="toMoveIndex === null" x-on:click="toMoveIndex = +$el.parentNode.dataset.index">✥</button>
 					<button title="Cancel the reordering" x-show="toMoveIndex !== null && toMoveIndex == index" x-on:click="toMoveIndex = null">→</button>
 					<button title="Move the selected page to before this page" x-show="toMoveIndex !== null && toMoveIndex > index" x-on:click="moveTo($el.parentNode, 0)">↗</button>
 					<button title="Move the selected page to after this page" x-show="toMoveIndex !== null && toMoveIndex < index" x-on:click="moveTo($el.parentNode, 1)">↘</button>
@@ -91,6 +99,7 @@ button {
 					<img x-bind:src="page.url" x-bind:style="`transform:rotate(-${page.rotation}deg);max-height:100%;object-fit:contain;max-width:100%`" />
 					</span>
 					<button x-on:click="page.rotation = (page.rotation + 90) % 360">↺ rotate</button>
+					<button title="Remove this page" x-show="toMoveIndex == index" x-on:click="removePage()" style="background-color:pink">×</button>
 				</li>
 			</template>
 		</ul>
