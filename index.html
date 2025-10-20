@@ -5,6 +5,11 @@
 <meta charset="utf-8" />
 <script src="https://unpkg.com/pdf-lib"></script>
 <script src="https://unpkg.com/alpinejs" defer></script>
+<style>
+button {
+	min-width: 30px;
+}
+</style>
 </head>
 
 <body>
@@ -78,9 +83,10 @@
 		}">
 			<template x-for="(page, index) in pages" :key="page.id">
 				<li x-bind:data-index="index">
-					<button x-on:click="toMoveIndex = +$el.parentNode.dataset.index">move</button>
-					<button x-on:click="moveTo($el.parentNode, 0)">before</button>
-					<button x-on:click="moveTo($el.parentNode, 1)">after</button>
+					<button title="Select this page to be moved" x-show="toMoveIndex === null" x-on:click="toMoveIndex = +$el.parentNode.dataset.index">✥</button>
+					<button title="Cancel the reordering" x-show="toMoveIndex !== null && toMoveIndex == index" x-on:click="toMoveIndex = null">→</button>
+					<button title="Move the selected page to before this page" x-show="toMoveIndex !== null && toMoveIndex > index" x-on:click="moveTo($el.parentNode, 0)">↗</button>
+					<button title="Move the selected page to after this page" x-show="toMoveIndex !== null && toMoveIndex < index" x-on:click="moveTo($el.parentNode, 1)">↘</button>
 					<span style="display:inline-flex;justify-content:center;height:100px;width:100px">
 					<img x-bind:src="page.url" x-bind:style="`transform:rotate(-${page.rotation}deg);max-height:100%;object-fit:contain;max-width:100%`" />
 					</span>
