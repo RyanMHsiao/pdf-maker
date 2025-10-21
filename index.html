@@ -9,11 +9,52 @@
 button {
 	min-width: 30px;
 }
+
+/*
+The styling is meant to somewhat resemble a PDF
+Functionality is still the main concern, though
+*/
+.content {
+	font-family: Open Sans,Arial;
+	background-color: white;
+    color: #454545;
+    font-size: 16px;
+    margin: 2em auto;
+    max-width: 800px;
+    padding: 1em;
+    line-height: 1.4;
+}
+
+.input-line {
+	border: none;
+	border-bottom: 2px solid #454545;
+}
+
+body {
+	background-color: #282828;
+}
+
+.page-row {
+	display: flex;
+}
+
+.fake-button {
+	color: blue;
+}
+
+hr {
+	border-width: 1px;
+	border-style: solid;
+	margin: auto;
+	margin-top: 1em;
+	margin-bottom: 1em;
+	width: 60%;
+}
 </style>
 </head>
 
 <body>
-	<div x-data="{
+	<div class="content" x-data="{
 		pages: [],
 		nextPageKey: 1,
 		async addPages(files) {
@@ -31,7 +72,17 @@ button {
 		outputInches: '8.5',
 
 		outputDataUri: null,
-		async createPdf() {
+		async generateAndDownloadPdf() {
+			// Alpine seems to mess with order of execution in some way
+			// so this code might not be totally correct
+			$refs.downloadButton.innerHTML = 'Generating PDF... (be patient)';
+			try {
+				await this.downloadPdf();
+			} finally {
+				$refs.downloadButton.innerHTML = 'Download';
+			}
+		},
+		async downloadPdf() {
 			const pdfDoc = await PDFLib.PDFDocument.create();
 			// PDF unit defined as 1/72th of an inch. Does not reject negative yet.
 			// Feature idea: list both max width and max height, use tighter constraint
@@ -43,19 +94,27 @@ button {
 				const page = pdfDoc.addPage([pageWidth, pageHeight])
 				page.drawImage(jpgImage, drawOptions);
 			}
+
 			this.outputDataUri = await pdfDoc.saveAsBase64({ dataUri: true });
+			$refs.downloadLink.click();
 		},
 	}">
-		<label>
-			Add pages:
-			<input x-on:change="addPages($el.files)" type="file" id="file-input" x-ref="fileInput" multiple accept="image/jpeg"/>
-		</label>
-		<br>
-		<label>
-			Page width (inches):
-			<input x-model="outputInches" placeholder="8.5">
-		</label>
-		<ul x-data="{
+		<div>
+			<label class="fake-button">
+				Add pages
+				<input style="opacity: 0" x-on:change="await addPages($el.files); $el.value = ''" type="file" id="file-input" x-ref="fileInput" multiple accept="image/jpeg"/>
+			</label>
+		</div>
+		<div>
+			<label>
+				Page width:
+				<input class="input-line" x-model="outputInches" placeholder="8.5">
+			</label>
+			inches
+		</div>
+		<hr />
+		<div x-show="pages.length == 0">Click the blue "Add pages" to upload JPEGs for use here</div>
+		<div x-data="{
 			toMoveIndex: null,
 
 			moveTo(targetElement, insertOffset) {
@@ -90,7 +149,7 @@ button {
 			},
 		}">
 			<template x-for="(page, index) in pages" :key="page.id">
-				<li x-bind:data-index="index">
+				<div class="page-row" x-bind:data-index="index">
 					<button title="Select this page to be moved or deleted" x-show="toMoveIndex === null" x-on:click="toMoveIndex = +$el.parentNode.dataset.index">✥</button>
 					<button title="Cancel the reordering" x-show="toMoveIndex !== null && toMoveIndex == index" x-on:click="toMoveIndex = null">→</button>
 					<button title="Move the selected page to before this page" x-show="toMoveIndex !== null && toMoveIndex > index" x-on:click="moveTo($el.parentNode, 0)">↗</button>
@@ -100,18 +159,19 @@ button {
 					</span>
 					<button x-on:click="page.rotation = (page.rotation + 90) % 360">↺ rotate</button>
 					<button title="Remove this page" x-show="toMoveIndex == index" x-on:click="removePage()" style="background-color:pink">×</button>
-				</li>
+				</div>
 			</template>
-		</ul>
-		<label>
-			Save as:
-			<input x-model="outputName" placeholder="filename">
-		</label>
-		<span>.pdf</span>
-		<br>
-		<button x-on:click="createPdf()">Generate PDF</button>
-		<br>
-		<a x-bind:href="outputDataUri" x-bind:download="outputName + '.pdf'">Download</a>
+		</div>
+		<hr />
+		<div>
+			<label>
+				Save as:
+				<input class="input-line" x-model="outputName" placeholder="filename">
+			</label>
+			<span>.pdf</span>
+		</div>
+		<div x-ref="downloadButton" class="fake-button" x-on:click="generateAndDownloadPdf()">Download</div>
+		<a x-ref="downloadLink" x-bind:href="outputDataUri" x-bind:download="outputName + '.pdf'" style="display:none">Hidden download link for technical reasons</a>
 	</div>
 </body>
 <script>
@@ -128,7 +188,7 @@ async function blobToDataURL(blob) {
 }
 
 function getPageOptions(pageWidth, jpgImage, rotate) {
-	console.log(pageWidth, jpgImage, rotate);
+	// console.log(pageWidth, jpgImage, rotate);
 	if (rotate != 0 && rotate != 90 && rotate != 180 && rotate != 270) {
 		rotate = 0;
 	}
@@ -148,7 +208,7 @@ function getPageOptions(pageWidth, jpgImage, rotate) {
 	if (rotate == 180 || rotate == 270) {
 		result.y = result.pageHeight;
 	}
-	console.log(result);
+	// console.log(result);
 	return result;
 }
 </script>
