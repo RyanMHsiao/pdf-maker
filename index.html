@@ -9,11 +9,34 @@
 button {
 	min-width: 30px;
 }
+
+/*
+The styling is meant to somewhat resemble a PDF
+Functionality is still the main concern, though
+*/
+.content {
+	font-family: Open Sans,Arial;
+	background-color: white;
+    color: #454545;
+    font-size: 16px;
+    margin: 2em auto;
+    max-width: 800px;
+    padding: 1em;
+    line-height: 1.4;
+}
+
+body {
+	background-color: #282828;
+}
+
+.page-row {
+	display: flex;
+}
 </style>
 </head>
 
 <body>
-	<div x-data="{
+	<div class="content" x-data="{
 		pages: [],
 		nextPageKey: 1,
 		async addPages(files) {
@@ -55,7 +78,7 @@ button {
 			Page width (inches):
 			<input x-model="outputInches" placeholder="8.5">
 		</label>
-		<ul x-data="{
+		<div x-data="{
 			toMoveIndex: null,
 
 			moveTo(targetElement, insertOffset) {
@@ -90,7 +113,7 @@ button {
 			},
 		}">
 			<template x-for="(page, index) in pages" :key="page.id">
-				<li x-bind:data-index="index">
+				<div class="page-row" x-bind:data-index="index">
 					<button title="Select this page to be moved or deleted" x-show="toMoveIndex === null" x-on:click="toMoveIndex = +$el.parentNode.dataset.index">✥</button>
 					<button title="Cancel the reordering" x-show="toMoveIndex !== null && toMoveIndex == index" x-on:click="toMoveIndex = null">→</button>
 					<button title="Move the selected page to before this page" x-show="toMoveIndex !== null && toMoveIndex > index" x-on:click="moveTo($el.parentNode, 0)">↗</button>
