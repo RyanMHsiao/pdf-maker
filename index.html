@@ -32,6 +32,10 @@ body {
 .page-row {
 	display: flex;
 }
+
+.fake-button {
+	color: blue;
+}
 </style>
 </head>
 
@@ -54,7 +58,7 @@ body {
 		outputInches: '8.5',
 
 		outputDataUri: null,
-		async createPdf() {
+		async downloadPdf() {
 			const pdfDoc = await PDFLib.PDFDocument.create();
 			// PDF unit defined as 1/72th of an inch. Does not reject negative yet.
 			// Feature idea: list both max width and max height, use tighter constraint
@@ -66,12 +70,14 @@ body {
 				const page = pdfDoc.addPage([pageWidth, pageHeight])
 				page.drawImage(jpgImage, drawOptions);
 			}
+
 			this.outputDataUri = await pdfDoc.saveAsBase64({ dataUri: true });
+			$refs.downloadLink.click();
 		},
 	}">
-		<label>
-			Add pages:
-			<input x-on:change="addPages($el.files)" type="file" id="file-input" x-ref="fileInput" multiple accept="image/jpeg"/>
+		<label class="fake-button">
+			Add pages
+			<input style="opacity: 0" x-on:change="await addPages($el.files); $el.value = ''" type="file" id="file-input" x-ref="fileInput" multiple accept="image/jpeg"/>
 		</label>
 		<br>
 		<label>
@@ -123,18 +129,18 @@ body {
 					</span>
 					<button x-on:click="page.rotation = (page.rotation + 90) % 360">↺ rotate</button>
 					<button title="Remove this page" x-show="toMoveIndex == index" x-on:click="removePage()" style="background-color:pink">×</button>
-				</li>
+				</div>
 			</template>
-		</ul>
-		<label>
-			Save as:
-			<input x-model="outputName" placeholder="filename">
-		</label>
-		<span>.pdf</span>
-		<br>
-		<button x-on:click="createPdf()">Generate PDF</button>
-		<br>
-		<a x-bind:href="outputDataUri" x-bind:download="outputName + '.pdf'">Download</a>
+		</div>
+		<div>
+			<label>
+				Save as:
+				<input x-model="outputName" placeholder="filename">
+			</label>
+			<span>.pdf</span>
+		</div>
+		<div class="fake-button" x-on:click="downloadPdf()">Download</div>
+		<a x-ref="downloadLink" x-bind:href="outputDataUri" x-bind:download="outputName + '.pdf'" style="display:none">Hidden download link for technical reasons</a>
 	</div>
 </body>
 <script>
@@ -151,7 +157,7 @@ async function blobToDataURL(blob) {
 }
 
 function getPageOptions(pageWidth, jpgImage, rotate) {
-	console.log(pageWidth, jpgImage, rotate);
+	// console.log(pageWidth, jpgImage, rotate);
 	if (rotate != 0 && rotate != 90 && rotate != 180 && rotate != 270) {
 		rotate = 0;
 	}
@@ -171,7 +177,7 @@ function getPageOptions(pageWidth, jpgImage, rotate) {
 	if (rotate == 180 || rotate == 270) {
 		result.y = result.pageHeight;
 	}
-	console.log(result);
+	// console.log(result);
 	return result;
 }
 </script>
