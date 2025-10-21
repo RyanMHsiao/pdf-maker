@@ -25,6 +25,11 @@ Functionality is still the main concern, though
     line-height: 1.4;
 }
 
+.input-line {
+	border: none;
+	border-bottom: 2px solid #454545;
+}
+
 body {
 	background-color: #282828;
 }
@@ -35,6 +40,15 @@ body {
 
 .fake-button {
 	color: blue;
+}
+
+hr {
+	border-width: 1px;
+	border-style: solid;
+	margin: auto;
+	margin-top: 1em;
+	margin-bottom: 1em;
+	width: 60%;
 }
 </style>
 </head>
@@ -58,6 +72,16 @@ body {
 		outputInches: '8.5',
 
 		outputDataUri: null,
+		async generateAndDownloadPdf() {
+			// Alpine seems to mess with order of execution in some way
+			// so this code might not be totally correct
+			$refs.downloadButton.innerHTML = 'Generating PDF... (be patient)';
+			try {
+				await this.downloadPdf();
+			} finally {
+				$refs.downloadButton.innerHTML = 'Download';
+			}
+		},
 		async downloadPdf() {
 			const pdfDoc = await PDFLib.PDFDocument.create();
 			// PDF unit defined as 1/72th of an inch. Does not reject negative yet.
@@ -75,15 +99,21 @@ body {
 			$refs.downloadLink.click();
 		},
 	}">
-		<label class="fake-button">
-			Add pages
-			<input style="opacity: 0" x-on:change="await addPages($el.files); $el.value = ''" type="file" id="file-input" x-ref="fileInput" multiple accept="image/jpeg"/>
-		</label>
-		<br>
-		<label>
-			Page width (inches):
-			<input x-model="outputInches" placeholder="8.5">
-		</label>
+		<div>
+			<label class="fake-button">
+				Add pages
+				<input style="opacity: 0" x-on:change="await addPages($el.files); $el.value = ''" type="file" id="file-input" x-ref="fileInput" multiple accept="image/jpeg"/>
+			</label>
+		</div>
+		<div>
+			<label>
+				Page width:
+				<input class="input-line" x-model="outputInches" placeholder="8.5">
+			</label>
+			inches
+		</div>
+		<hr />
+		<div x-show="pages.length == 0">Click the blue "Add pages" to upload JPEGs for use here</div>
 		<div x-data="{
 			toMoveIndex: null,
 
@@ -132,14 +162,15 @@ body {
 				</div>
 			</template>
 		</div>
+		<hr />
 		<div>
 			<label>
 				Save as:
-				<input x-model="outputName" placeholder="filename">
+				<input class="input-line" x-model="outputName" placeholder="filename">
 			</label>
 			<span>.pdf</span>
 		</div>
-		<div class="fake-button" x-on:click="downloadPdf()">Download</div>
+		<div x-ref="downloadButton" class="fake-button" x-on:click="generateAndDownloadPdf()">Download</div>
 		<a x-ref="downloadLink" x-bind:href="outputDataUri" x-bind:download="outputName + '.pdf'" style="display:none">Hidden download link for technical reasons</a>
 	</div>
 </body>
